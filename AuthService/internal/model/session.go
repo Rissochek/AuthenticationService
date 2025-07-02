@@ -5,4 +5,6 @@ type Session struct {
 	UserGUID 	string 	`gorm:"index"`
 	Refresh  	string
 	ExpiresAt 	int64
+	UserIP		string
+	UserAgent	string
 }

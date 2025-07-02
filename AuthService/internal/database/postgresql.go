@@ -54,19 +54,21 @@ func (db *postgres_db) SearchGUID(guid string) error {
 	return nil
 }
 
-func (db *postgres_db) AddSession(guid string, refresh_generator RefreshManager) (uint, error) {
+func (db *postgres_db) AddSession(guid string, refresh_generator RefreshManager, user_agent string, user_ip string) (uint, string, error) {
 	session := model.Session{
 		UserGUID: guid,
 		ExpiresAt: time.Now().Unix() + int64(refresh_generator.GetExparationTime()),
+		UserIP: user_ip,
+		UserAgent: user_agent,
 	}
 
 	refresh, err := refresh_generator.GenerateRefreshToken()
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 	refresh_hash, err := utils.GenerateHash(refresh)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 
 	session.Refresh = refresh_hash
@@ -74,10 +76,10 @@ func (db *postgres_db) AddSession(guid string, refresh_generator RefreshManager)
 	result := db.PostgresDB.Create(&session)
 	if result != nil{
 		log.Errorf("failed to create session: %v", result.Error)
-		return 0, result.Error
+		return 0, "", result.Error
 	}
 
-	return session.ID, nil
+	return session.ID, "", nil
 }
 
 func (db *postgres_db) SearchSession(guid string, session_id *uint) (*model.Session, error){
@@ -91,8 +93,8 @@ func (db *postgres_db) SearchSession(guid string, session_id *uint) (*model.Sess
 	return &session, nil
 }
 
-func (db *postgres_db) DeleteSession(guid string) error {
-	if err := db.PostgresDB.Where("user_guid = ?", guid).Delete(&model.Session{}).Error; err != nil {
+func (db *postgres_db) DeleteSession(guid string, session_id uint) error {
+	if err := db.PostgresDB.Where("user_guid = ? AND id = ?", guid).Delete(&model.Session{}).Error; err != nil {
 		log.Errorf("failed to delete session: %v", err)
 		return fmt.Errorf("failed to delete session")
 	}

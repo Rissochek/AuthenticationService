@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"net/http"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -28,8 +32,8 @@ type (
 	Database interface {
 		SearchGUID(guid string) error
 		SearchSession(guid string, session_id uint) (*model.Session, error)
-		DeleteSession(guid string) error
-		AddSession(guid string, refresh_generator RefreshManager) (uint, error)
+		DeleteSession(guid string, session_id uint) error
+		AddSession(guid string, refresh_generator RefreshManager, user_agent string, user_ip string) (uint, string, error)
 	}
 
 	AuthManager interface {
@@ -60,7 +64,17 @@ func (s *server) GetTokens(ctx context.Context, user_request *pb.GetTokensMsg) (
 		return nil, status.Error(codes.NotFound, "GUID not found")
 	}
 
-	session_id, err := s.MainDB.AddSession(user_request.GUID, s.RefreshManager)
+	user_agent, err := utils.GetFromMetadata(ctx, "user-agent")
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "user-agent header not provided")
+	}
+
+	user_ip, err := utils.GetFromMetadata(ctx, "x-forwarded-for")
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "x-forwarder-for header not provided")
+	}
+
+	session_id, refresh, err := s.MainDB.AddSession(user_request.GUID, s.RefreshManager, user_agent, user_ip)
 	if err != nil{
 		return nil, status.Error(codes.Internal, "failed to add session in db")
 	}
@@ -70,21 +84,27 @@ func (s *server) GetTokens(ctx context.Context, user_request *pb.GetTokensMsg) (
 		return nil, status.Error(codes.Internal, "failed to generate access token")
 	}
 
-	refresh, err := s.RefreshManager.GenerateRefreshToken()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to generate refresh token")
-	}
-
 	return &pb.GetTokensReply{Access: access, Refresh: refresh}, nil
 
 }
 
 func (s *server) RefreshTokens(ctx context.Context, user_request *pb.RefreshTokensMsg) (*pb.RefreshTokensReply, error) {
+	//checking process
 	access, err := utils.GetFromMetadata(ctx, "authorization")
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, "cant find authorization header")
 	}
 
+	user_agent, err := utils.GetFromMetadata(ctx, "user-agent")
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "user-agent header not provided")
+	}
+
+	user_ip, err := utils.GetFromMetadata(ctx, "x-forwarded-for")
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "x-forwarder-for header not provided")
+	}
+	
 	if err := s.BlacklistManager.BlacklistCkeck(ctx, access); err != nil {
 		log.Errorf("token is blacklisted: %v", err)
 		return nil, status.Error(codes.Unauthenticated, "token is invalid")
@@ -105,11 +125,65 @@ func (s *server) RefreshTokens(ctx context.Context, user_request *pb.RefreshToke
 		return nil, status.Error(codes.Unauthenticated, "cannot find session")
 	}
 
+	if session.UserAgent != user_agent {
+		if err := s.BlacklistManager.AddToBlacklist(access, claims.ExpiresAt, ctx); err != nil {
+			return nil, status.Error(codes.Internal, "failed to add token to blacklist")
+		}
+	
+		if err := s.MainDB.DeleteSession(claims.GUID, claims.SessionId); err != nil {
+			return nil, status.Error(codes.Internal, "failed to delete session")
+		}
+		
+		return nil, status.Error(codes.Unauthenticated, "user-agent changed, session deauthorized")
+	}
+
+	if session.UserIP != user_ip {
+		data := map[string] string {
+			"message": "somebody wanted to refresh from another IP",
+			"new_ip": user_ip,
+			"old_ip": session.UserIP,
+			"guid": user_guid,
+			"sessionId": strconv.Itoa(int(session.ID)),
+		}
+
+		webhook := utils.GetKeyFromEnv("WEBHOOK_URL")
+		json_data, err := json.Marshal(data)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed marshal data")
+		}
+
+		response, err := http.Post(webhook, "application/json", bytes.NewBuffer(json_data))
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed send to webhook")
+		}
+		response.Body.Close()
+	}
 	err = utils.CompareHashAndPassword(user_request.Refresh, session.Refresh)
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, "refresh token is invalid")
 	}
-	return nil, nil
+	//generating process
+	err = s.MainDB.DeleteSession(session.UserGUID, session.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to delete session")
+	}
+
+	err = s.BlacklistManager.AddToBlacklist(access, claims.ExpiresAt, ctx)
+	if err != nil{
+		return nil, status.Error(codes.Internal, "failed to add token to blacklist")
+	}
+
+	session_id, new_refresh, err := s.MainDB.AddSession(claims.GUID, s.RefreshManager, user_agent, user_ip)
+	if err != nil{
+		return nil, status.Error(codes.Internal, "failed to add session in db")
+	}
+
+	new_access, err := s.AuthManager.GenerateToken(&model.User{GUID: claims.GUID}, session_id)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to generate access token")
+	}
+
+	return &pb.RefreshTokensReply{Access: new_access, Refresh: new_refresh}, nil
 }
 
 func (s *server) GetGUID(ctx context.Context, _ *emptypb.Empty) (*pb.GetGUIDReply, error) {
@@ -148,7 +222,7 @@ func (s *server) Logout(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, 
 		return nil, status.Error(codes.Internal, "failed to add token to blacklist")
 	}
 
-	if err := s.MainDB.DeleteSession(claims.GUID); err != nil {
+	if err := s.MainDB.DeleteSession(claims.GUID, claims.SessionId); err != nil {
 		return nil, status.Error(codes.Internal, "failed to delete session")
 	}
 	return &emptypb.Empty{}, nil
