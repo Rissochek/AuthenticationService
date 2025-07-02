@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "proto/";
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+service Auth {
+    rpc GetTokens(GetTokens_msg) returns (GetTokens_reply) {
+        option (google.api.http) = {
+            post: "/api/get-tokens",
+            body: "*"
+        };
+    };
+
+    rpc RefreshTokens(RefreshTokens_msg) returns (RefreshTokens_reply) {
+        option (google.api.http) = {
+            post: "/api/refresh-tokens",
+            body: "*"
+        };
+    };
+
+    rpc GetGUID(GetGUID_msg) returns (GetGUID_reply) {
+        option (google.api.http) = {
+            post: "/api/get-guid",
+            body: "*"
+        };
+    };
+
+    rpc Logout(Logout_msg) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/api/logout",
+            body: "*"
+        };
+    };
+}
+
+message GetTokens_msg {
+    string GUID = 1;
+}
+
+message RefreshTokens_msg {
+    string refresh = 1;
+}
+
+message GetGUID_msg {
+    string access = 1;
+}
+
+message Logout_msg {
+    string access = 1;
+}
+
+message GetTokens_reply {
+    string access = 1;
+    string refresh = 2;
+}
+
+message RefreshTokens_reply {
+    string access = 1;
+    string refresh = 2;
+}
+
+message GetGUID_reply {
+    string guid = 1;
+}
