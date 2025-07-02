@@ -14,7 +14,7 @@ import (
 
 type RefreshManager interface {
 	GenerateRefreshToken() (string, error)
-	GetExparationTime() (time.Duration)
+	GetExparationTime() time.Duration
 }
 
 type postgres_db struct {
@@ -22,13 +22,13 @@ type postgres_db struct {
 }
 
 func InitDataBase() *gorm.DB {
-	host 		:= utils.GetKeyFromEnv("POSTGRES_HOST")
-	user 		:= utils.GetKeyFromEnv("POSTGRES_USER")
-	password 	:= utils.GetKeyFromEnv("POSTGRES_PASSWORD")
-	db_name 	:= utils.GetKeyFromEnv("POSTGRES_DB")
-	port 		:= utils.GetKeyFromEnv("POSTGRES_PORT")
-	timezone 	:= utils.GetKeyFromEnv("POSTGRES_TZ")
-	ssl_mode 	:= utils.GetKeyFromEnv("POSTGRES_SSL")
+	host := utils.GetKeyFromEnv("POSTGRES_HOST")
+	user := utils.GetKeyFromEnv("POSTGRES_USER")
+	password := utils.GetKeyFromEnv("POSTGRES_PASSWORD")
+	db_name := utils.GetKeyFromEnv("POSTGRES_DB")
+	port := utils.GetKeyFromEnv("POSTGRES_PORT")
+	timezone := utils.GetKeyFromEnv("POSTGRES_TZ")
+	ssl_mode := utils.GetKeyFromEnv("POSTGRES_SSL")
 
 	dsn := fmt.Sprintf("host=%v user=%v password=%v dbname=%v port=%v sslmode=%v TimeZone=%v", host, user, password, db_name, port, ssl_mode, timezone)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -56,9 +56,9 @@ func (db *postgres_db) SearchGUID(guid string) error {
 
 func (db *postgres_db) AddSession(guid string, refresh_generator RefreshManager, user_agent string, user_ip string) (uint, string, error) {
 	session := model.Session{
-		UserGUID: guid,
+		UserGUID:  guid,
 		ExpiresAt: time.Now().Unix() + int64(refresh_generator.GetExparationTime()),
-		UserIP: user_ip,
+		UserIP:    user_ip,
 		UserAgent: user_agent,
 	}
 
@@ -74,7 +74,7 @@ func (db *postgres_db) AddSession(guid string, refresh_generator RefreshManager,
 	session.Refresh = refresh_hash
 
 	result := db.PostgresDB.Create(&session)
-	if result != nil{
+	if result != nil {
 		log.Errorf("failed to create session: %v", result.Error)
 		return 0, "", result.Error
 	}
@@ -82,7 +82,7 @@ func (db *postgres_db) AddSession(guid string, refresh_generator RefreshManager,
 	return session.ID, "", nil
 }
 
-func (db *postgres_db) SearchSession(guid string, session_id *uint) (*model.Session, error){
+func (db *postgres_db) SearchSession(guid string, session_id uint) (*model.Session, error) {
 	session := model.Session{}
 	err := db.PostgresDB.Where("user_guid = ? AND id = ?", guid, session_id).Find(&session).Error
 	if err != nil {

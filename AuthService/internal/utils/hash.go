@@ -1,11 +1,11 @@
 package utils
 
 import (
-	"golang.org/x/crypto/bcrypt"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
-func GenerateHash(password string) (string, error){
+func GenerateHash(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Errorf("failed to generate hash: %v", err)

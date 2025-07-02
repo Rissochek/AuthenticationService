@@ -13,7 +13,7 @@ import (
 )
 
 type TokenClaims struct {
-	GUID string
+	GUID      string
 	SessionId uint
 	jwt.StandardClaims
 }
@@ -30,7 +30,7 @@ func NewJWTManager(token_duration time.Duration) *JWTManager {
 
 func (manager *JWTManager) GenerateToken(user *model.User, session_id uint) (string, error) {
 	claims := TokenClaims{
-		GUID: user.GUID,
+		GUID:      user.GUID,
 		SessionId: session_id,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(manager.TokenDuration).Unix()},
@@ -72,12 +72,12 @@ func (manager *JWTManager) VerifyToken(user_token string, exparation_check bool)
 	if !ok {
 		return nil, fmt.Errorf("invalid token claims")
 	}
-	if exparation_check{
+	if exparation_check {
 		if claims.ExpiresAt < time.Now().Unix() {
 			return nil, fmt.Errorf("token has expired")
 		}
 	}
-	
+
 	return claims, nil
 }
 

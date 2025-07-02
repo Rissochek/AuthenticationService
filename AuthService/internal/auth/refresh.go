@@ -9,7 +9,7 @@ import (
 )
 
 type refresh_generator struct {
-	RefreshLength int64
+	RefreshLength  int64
 	ExparationTime time.Duration
 }
 
@@ -28,6 +28,6 @@ func (generator *refresh_generator) GenerateRefresh() (string, error) {
 	return base64.StdEncoding.EncodeToString(bytes), nil
 }
 
-func (generator *refresh_generator) GetExparationTime() (time.Duration) {
+func (generator *refresh_generator) GetExparationTime() time.Duration {
 	return generator.ExparationTime
 }

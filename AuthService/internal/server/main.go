@@ -26,7 +26,7 @@ var ()
 type (
 	RefreshManager interface {
 		GenerateRefreshToken() (string, error)
-		GetExparationTime() (time.Duration)
+		GetExparationTime() time.Duration
 	}
 
 	Database interface {
@@ -48,9 +48,9 @@ type (
 
 	server struct {
 		pb.UnimplementedAuthServer
-		MainDB         Database
-		AuthManager    AuthManager
-		RefreshManager RefreshManager
+		MainDB           Database
+		AuthManager      AuthManager
+		RefreshManager   RefreshManager
 		BlacklistManager BlacklistManager
 	}
 )
@@ -75,7 +75,7 @@ func (s *server) GetTokens(ctx context.Context, user_request *pb.GetTokensMsg) (
 	}
 
 	session_id, refresh, err := s.MainDB.AddSession(user_request.GUID, s.RefreshManager, user_agent, user_ip)
-	if err != nil{
+	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to add session in db")
 	}
 
@@ -104,7 +104,7 @@ func (s *server) RefreshTokens(ctx context.Context, user_request *pb.RefreshToke
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "x-forwarder-for header not provided")
 	}
-	
+
 	if err := s.BlacklistManager.BlacklistCkeck(ctx, access); err != nil {
 		log.Errorf("token is blacklisted: %v", err)
 		return nil, status.Error(codes.Unauthenticated, "token is invalid")
@@ -129,20 +129,20 @@ func (s *server) RefreshTokens(ctx context.Context, user_request *pb.RefreshToke
 		if err := s.BlacklistManager.AddToBlacklist(access, claims.ExpiresAt, ctx); err != nil {
 			return nil, status.Error(codes.Internal, "failed to add token to blacklist")
 		}
-	
+
 		if err := s.MainDB.DeleteSession(claims.GUID, claims.SessionId); err != nil {
 			return nil, status.Error(codes.Internal, "failed to delete session")
 		}
-		
+
 		return nil, status.Error(codes.Unauthenticated, "user-agent changed, session deauthorized")
 	}
 
 	if session.UserIP != user_ip {
-		data := map[string] string {
-			"message": "somebody wanted to refresh from another IP",
-			"new_ip": user_ip,
-			"old_ip": session.UserIP,
-			"guid": user_guid,
+		data := map[string]string{
+			"message":   "somebody wanted to refresh from another IP",
+			"new_ip":    user_ip,
+			"old_ip":    session.UserIP,
+			"guid":      user_guid,
 			"sessionId": strconv.Itoa(int(session.ID)),
 		}
 
@@ -169,12 +169,12 @@ func (s *server) RefreshTokens(ctx context.Context, user_request *pb.RefreshToke
 	}
 
 	err = s.BlacklistManager.AddToBlacklist(access, claims.ExpiresAt, ctx)
-	if err != nil{
+	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to add token to blacklist")
 	}
 
 	session_id, new_refresh, err := s.MainDB.AddSession(claims.GUID, s.RefreshManager, user_agent, user_ip)
-	if err != nil{
+	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to add session in db")
 	}
 
@@ -202,8 +202,8 @@ func (s *server) GetGUID(ctx context.Context, _ *emptypb.Empty) (*pb.GetGUIDRepl
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, err.Error())
 	}
-	
-	return &pb.GetGUIDReply{Guid: claims.GUID}, nil 
+
+	return &pb.GetGUIDReply{Guid: claims.GUID}, nil
 }
 
 func (s *server) Logout(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
@@ -217,7 +217,7 @@ func (s *server) Logout(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if err := s.BlacklistManager.AddToBlacklist(token, claims.ExpiresAt, ctx); err != nil {
 		return nil, status.Error(codes.Internal, "failed to add token to blacklist")
 	}
