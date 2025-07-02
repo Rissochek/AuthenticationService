@@ -4,59 +4,39 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"AuthService/internal/auth"
+	"AuthService/internal/database"
 	"AuthService/internal/model"
-	"AuthService/internal/utils"
+	"AuthService/source/utils"
 
 	pb "Proto"
 )
 
-var ()
-
 type (
-	RefreshManager interface {
-		GenerateRefreshToken() (string, error)
-		GetExparationTime() time.Duration
-	}
-
-	Database interface {
-		SearchGUID(guid string) error
-		SearchSession(guid string, session_id uint) (*model.Session, error)
-		DeleteSession(guid string, session_id uint) error
-		AddSession(guid string, refresh_generator RefreshManager, user_agent string, user_ip string) (uint, string, error)
-	}
-
-	AuthManager interface {
-		GenerateToken(user *model.User, session_id uint) (string, error)
-		VerifyToken(user_token string, exparation_check bool) (auth.TokenClaims, error)
-	}
-
-	BlacklistManager interface {
-		AddToBlacklist(token string, expiry int64, ctx context.Context) error
-		BlacklistCkeck(ctx context.Context, token string) error
-	}
-
 	server struct {
 		pb.UnimplementedAuthServer
-		MainDB           Database
-		AuthManager      AuthManager
-		RefreshManager   RefreshManager
-		BlacklistManager BlacklistManager
+		MainDB           database.Database
+		AuthManager      auth.AuthManager
+		RefreshManager   auth.RefreshManager
+		BlacklistManager database.BlacklistManager
 	}
 )
 
-func NewServer(main_db Database) *server {
-	return &server{MainDB: main_db}
+func NewServer(main_db database.Database, auth_manager auth.AuthManager, refresh_manager auth.RefreshManager, blacklist_manager database.BlacklistManager) *server {
+	return &server{MainDB: main_db, AuthManager: auth_manager, RefreshManager: refresh_manager, BlacklistManager: blacklist_manager}
 }
 
 func (s *server) GetTokens(ctx context.Context, user_request *pb.GetTokensMsg) (*pb.GetTokensReply, error) {
@@ -105,9 +85,12 @@ func (s *server) RefreshTokens(ctx context.Context, user_request *pb.RefreshToke
 		return nil, status.Error(codes.InvalidArgument, "x-forwarder-for header not provided")
 	}
 
-	if err := s.BlacklistManager.BlacklistCkeck(ctx, access); err != nil {
-		log.Errorf("token is blacklisted: %v", err)
-		return nil, status.Error(codes.Unauthenticated, "token is invalid")
+	is_blacklisted, err := s.BlacklistManager.BlacklistCheck(ctx, access)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed blacklist check")
+	}
+	if is_blacklisted {
+		return nil, status.Error(codes.Unauthenticated, "token is blacklisted")
 	}
 
 	claims, err := s.AuthManager.VerifyToken(access, false)
@@ -126,7 +109,11 @@ func (s *server) RefreshTokens(ctx context.Context, user_request *pb.RefreshToke
 	}
 
 	if session.UserAgent != user_agent {
-		if err := s.BlacklistManager.AddToBlacklist(access, claims.ExpiresAt, ctx); err != nil {
+		token, err := auth.ExtractToken(access)
+		if err != nil {
+			return nil, status.Error(codes.Unauthenticated, err.Error())
+		}
+		if err := s.BlacklistManager.AddToBlacklist(token, claims.ExpiresAt, ctx); err != nil {
 			return nil, status.Error(codes.Internal, "failed to add token to blacklist")
 		}
 
@@ -168,7 +155,11 @@ func (s *server) RefreshTokens(ctx context.Context, user_request *pb.RefreshToke
 		return nil, status.Error(codes.Internal, "failed to delete session")
 	}
 
-	err = s.BlacklistManager.AddToBlacklist(access, claims.ExpiresAt, ctx)
+	token, err := auth.ExtractToken(access)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+	err = s.BlacklistManager.AddToBlacklist(token, claims.ExpiresAt, ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to add token to blacklist")
 	}
@@ -192,10 +183,18 @@ func (s *server) GetGUID(ctx context.Context, _ *emptypb.Empty) (*pb.GetGUIDRepl
 		return nil, status.Error(codes.Unauthenticated, "metadata is not provided")
 	}
 
-	token := md.Get("authorization")[0]
-	if err := s.BlacklistManager.BlacklistCkeck(ctx, token); err != nil {
-		log.Errorf("token is blacklisted: %v", err)
-		return nil, status.Error(codes.Unauthenticated, "token is invalid")
+	raw_token := md.Get("authorization")
+	if raw_token == nil {
+		return nil, status.Error(codes.Unauthenticated, "authorization header is not provided")
+	}
+
+	token := raw_token[0]
+	is_blacklisted, err := s.BlacklistManager.BlacklistCheck(ctx, token)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed blacklist check")
+	}
+	if is_blacklisted {
+		return nil, status.Error(codes.Unauthenticated, "token is blacklisted")
 	}
 
 	claims, err := s.AuthManager.VerifyToken(token, true)
@@ -218,6 +217,10 @@ func (s *server) Logout(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, 
 		return nil, err
 	}
 
+	token, err = auth.ExtractToken(token)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
 	if err := s.BlacklistManager.AddToBlacklist(token, claims.ExpiresAt, ctx); err != nil {
 		return nil, status.Error(codes.Internal, "failed to add token to blacklist")
 	}
@@ -226,4 +229,33 @@ func (s *server) Logout(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, 
 		return nil, status.Error(codes.Internal, "failed to delete session")
 	}
 	return &emptypb.Empty{}, nil
+}
+
+func main() {
+	utils.LoadEnvFile()
+	port, _ := strconv.Atoi(utils.GetKeyFromEnv("AUTH_HOST_PORT"))
+	db := database.InitDataBase()
+	main_db := database.NewPostgresDB(db)
+	auth_manager := auth.NewJWTManager(1 * time.Minute)
+	refresh_manager := auth.NewRefreshGenerator(48, 24 * time.Hour)
+	blacklist_manager := database.NewRedisManager()
+
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		log.Fatalf("failed to listen %v", err)
+	}
+
+	var opts []grpc.ServerOption
+	if err != nil {
+		log.Fatalf("failed to initialize interceptor: %v", err)
+	}
+
+	server := NewServer(main_db, auth_manager, refresh_manager, blacklist_manager)
+	grpcServer := grpc.NewServer(opts...)
+	pb.RegisterAuthServer(grpcServer, server)
+	log.Printf("Server listening on: %v", lis.Addr())
+
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }

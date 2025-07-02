@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: "authdb"
+      POSTGRES_USER: "riss"
+      POSTGRES_PASSWORD: "123"
+    ports:
+      - "9001:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "123@mail.ru"
+      PGADMIN_DEFAULT_PASSWORD: "123"
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
+
+  redis:
+    image: redis:latest
+    environment: 
+      REDIS_PASSWORD: 123
+      REDIS_USER: riss
+      REDIS_USER_PASSWORD: 123
+    ports:
+      - "6380:6379"
+    volumes:
+      - redisdata:/data
+
+volumes:
+  postgres_data:
+  redisdata:

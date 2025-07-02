@@ -16,7 +16,7 @@ func LoadEnvFile() {
 func GetKeyFromEnv(key string) string {
 	secret, exists := os.LookupEnv(key)
 	if !exists {
-		log.Fatalf("secret key value is not set in .env file.")
+		log.Fatalf("%v value is not set in .env file.", key)
 	}
 	return secret
 }

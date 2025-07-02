@@ -8,17 +8,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type RefreshManager interface {
+	GenerateRefreshToken() (string, error)
+	GetExparationTime() time.Duration
+}
+
 type refresh_generator struct {
 	RefreshLength  int64
 	ExparationTime time.Duration
 }
 
-func Newrefresh_generator(refresh_length *int64, exparation_time time.Duration) *refresh_generator {
-	refresh_generator := refresh_generator{RefreshLength: *refresh_length, ExparationTime: exparation_time}
+func NewRefreshGenerator(refresh_length int64, exparation_time time.Duration) *refresh_generator {
+	refresh_generator := refresh_generator{RefreshLength: refresh_length, ExparationTime: exparation_time}
 	return &refresh_generator
 }
 
-func (generator *refresh_generator) GenerateRefresh() (string, error) {
+func (generator *refresh_generator) GenerateRefreshToken() (string, error) {
 	bytes := make([]byte, generator.RefreshLength)
 	_, err := rand.Read(bytes)
 	if err != nil {

@@ -6,11 +6,16 @@ import (
 	"time"
 
 	"AuthService/internal/model"
-	"AuthService/internal/utils"
+	"AuthService/source/utils"
 
 	"github.com/golang-jwt/jwt"
 	log "github.com/sirupsen/logrus"
 )
+
+type AuthManager interface {
+	GenerateToken(user *model.User, session_id uint) (string, error)
+	VerifyToken(user_token string, exparation_check bool) (*TokenClaims, error)
+}
 
 type TokenClaims struct {
 	GUID      string
@@ -65,17 +70,31 @@ func (manager *JWTManager) VerifyToken(user_token string, exparation_check bool)
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("invalid token: %w", err)
+		if validation_error, ok := err.(*jwt.ValidationError); ok {
+			if validation_error.Errors&jwt.ValidationErrorSignatureInvalid != 0{
+				return nil, fmt.Errorf("invalid signature")
+			}
+
+			if validation_error.Errors&jwt.ValidationErrorExpired != 0 {
+				if exparation_check {
+					return nil, fmt.Errorf("token expired")
+				}
+				
+				claims, ok := token.Claims.(*TokenClaims)
+				if !ok {
+					return nil, fmt.Errorf("invalid token claims")
+				}
+			
+				return claims, nil
+			}
+		}
+		log.Errorf("invalid token: %v", err)
+		return nil, fmt.Errorf("invalid token")
 	}
 
 	claims, ok := token.Claims.(*TokenClaims)
 	if !ok {
 		return nil, fmt.Errorf("invalid token claims")
-	}
-	if exparation_check {
-		if claims.ExpiresAt < time.Now().Unix() {
-			return nil, fmt.Errorf("token has expired")
-		}
 	}
 
 	return claims, nil
