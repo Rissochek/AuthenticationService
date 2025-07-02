@@ -3,16 +3,18 @@ package auth
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type refresh_generator struct {
 	RefreshLength int64
+	ExparationTime time.Duration
 }
 
-func NewRefreshGenerator(refresh_length *int64) *refresh_generator {
-	refresh_generator := refresh_generator{RefreshLength: *refresh_length}
+func Newrefresh_generator(refresh_length *int64, exparation_time time.Duration) *refresh_generator {
+	refresh_generator := refresh_generator{RefreshLength: *refresh_length, ExparationTime: exparation_time}
 	return &refresh_generator
 }
 
@@ -24,4 +26,8 @@ func (generator *refresh_generator) GenerateRefresh() (string, error) {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(bytes), nil
+}
+
+func (generator *refresh_generator) GetExparationTime() (time.Duration) {
+	return generator.ExparationTime
 }

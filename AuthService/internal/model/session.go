@@ -5,5 +5,4 @@ type Session struct {
 	UserGUID 	string 	`gorm:"index"`
 	Refresh  	string
 	ExpiresAt 	int64
-	IsActive 	bool
 }

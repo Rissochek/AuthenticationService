@@ -17,10 +17,10 @@ type redis_manager struct{
 }
 
 func NewRedisManager() *redis_manager{
-	redis_host := utils.GetKeyFromEnv("REDIS_HOST")
-	redis_port := utils.GetKeyFromEnv("REDIS_PORT")
-	redis_password := utils.GetKeyFromEnv("REDIS_PASSWORD")
-	redis_db_num, err := strconv.Atoi(utils.GetKeyFromEnv("REDIS_DB"))
+	redis_host 			:= utils.GetKeyFromEnv("REDIS_HOST")
+	redis_port 			:= utils.GetKeyFromEnv("REDIS_PORT")
+	redis_password 		:= utils.GetKeyFromEnv("REDIS_PASSWORD")
+	redis_db_num, err 	:= strconv.Atoi(utils.GetKeyFromEnv("REDIS_DB"))
 	if err != nil{
 		log.Fatalf("invalid redis_db_num: %v", err)
 	}

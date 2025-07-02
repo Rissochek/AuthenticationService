@@ -14,6 +14,7 @@ import (
 
 type TokenClaims struct {
 	GUID string
+	SessionId uint
 	jwt.StandardClaims
 }
 
@@ -27,9 +28,10 @@ func NewJWTManager(token_duration time.Duration) *JWTManager {
 	return &JWTManager{TokenDuration: token_duration, SecretKey: secret}
 }
 
-func (manager *JWTManager) GenerateToken(user *model.User) (string, error) {
+func (manager *JWTManager) GenerateToken(user *model.User, session_id uint) (string, error) {
 	claims := TokenClaims{
 		GUID: user.GUID,
+		SessionId: session_id,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(manager.TokenDuration).Unix()},
 	}
@@ -44,7 +46,7 @@ func (manager *JWTManager) GenerateToken(user *model.User) (string, error) {
 	return signed_string, nil
 }
 
-func (manager *JWTManager) VerifyToken(user_token string) (*TokenClaims, error) {
+func (manager *JWTManager) VerifyToken(user_token string, exparation_check bool) (*TokenClaims, error) {
 	user_token, err := ExtractToken(user_token)
 	if err != nil {
 		return nil, err
@@ -70,10 +72,12 @@ func (manager *JWTManager) VerifyToken(user_token string) (*TokenClaims, error) 
 	if !ok {
 		return nil, fmt.Errorf("invalid token claims")
 	}
-	if claims.ExpiresAt < time.Now().Unix() {
-		return nil, fmt.Errorf("token has expired")
+	if exparation_check{
+		if claims.ExpiresAt < time.Now().Unix() {
+			return nil, fmt.Errorf("token has expired")
+		}
 	}
-
+	
 	return claims, nil
 }
 

@@ -32,8 +32,8 @@ const (
 type AuthClient interface {
 	GetTokens(ctx context.Context, in *GetTokensMsg, opts ...grpc.CallOption) (*GetTokensReply, error)
 	RefreshTokens(ctx context.Context, in *RefreshTokensMsg, opts ...grpc.CallOption) (*RefreshTokensReply, error)
-	GetGUID(ctx context.Context, in *GetGUIDMsg, opts ...grpc.CallOption) (*GetGUIDReply, error)
-	Logout(ctx context.Context, in *LogoutMsg, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetGUID(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetGUIDReply, error)
+	Logout(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type authClient struct {
@@ -64,7 +64,7 @@ func (c *authClient) RefreshTokens(ctx context.Context, in *RefreshTokensMsg, op
 	return out, nil
 }
 
-func (c *authClient) GetGUID(ctx context.Context, in *GetGUIDMsg, opts ...grpc.CallOption) (*GetGUIDReply, error) {
+func (c *authClient) GetGUID(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetGUIDReply, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetGUIDReply)
 	err := c.cc.Invoke(ctx, Auth_GetGUID_FullMethodName, in, out, cOpts...)
@@ -74,7 +74,7 @@ func (c *authClient) GetGUID(ctx context.Context, in *GetGUIDMsg, opts ...grpc.C
 	return out, nil
 }
 
-func (c *authClient) Logout(ctx context.Context, in *LogoutMsg, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *authClient) Logout(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Auth_Logout_FullMethodName, in, out, cOpts...)
@@ -90,8 +90,8 @@ func (c *authClient) Logout(ctx context.Context, in *LogoutMsg, opts ...grpc.Cal
 type AuthServer interface {
 	GetTokens(context.Context, *GetTokensMsg) (*GetTokensReply, error)
 	RefreshTokens(context.Context, *RefreshTokensMsg) (*RefreshTokensReply, error)
-	GetGUID(context.Context, *GetGUIDMsg) (*GetGUIDReply, error)
-	Logout(context.Context, *LogoutMsg) (*emptypb.Empty, error)
+	GetGUID(context.Context, *emptypb.Empty) (*GetGUIDReply, error)
+	Logout(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAuthServer()
 }
 
@@ -108,10 +108,10 @@ func (UnimplementedAuthServer) GetTokens(context.Context, *GetTokensMsg) (*GetTo
 func (UnimplementedAuthServer) RefreshTokens(context.Context, *RefreshTokensMsg) (*RefreshTokensReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RefreshTokens not implemented")
 }
-func (UnimplementedAuthServer) GetGUID(context.Context, *GetGUIDMsg) (*GetGUIDReply, error) {
+func (UnimplementedAuthServer) GetGUID(context.Context, *emptypb.Empty) (*GetGUIDReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetGUID not implemented")
 }
-func (UnimplementedAuthServer) Logout(context.Context, *LogoutMsg) (*emptypb.Empty, error) {
+func (UnimplementedAuthServer) Logout(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
 }
 func (UnimplementedAuthServer) mustEmbedUnimplementedAuthServer() {}
@@ -172,7 +172,7 @@ func _Auth_RefreshTokens_Handler(srv interface{}, ctx context.Context, dec func(
 }
 
 func _Auth_GetGUID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetGUIDMsg)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -184,13 +184,13 @@ func _Auth_GetGUID_Handler(srv interface{}, ctx context.Context, dec func(interf
 		FullMethod: Auth_GetGUID_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).GetGUID(ctx, req.(*GetGUIDMsg))
+		return srv.(AuthServer).GetGUID(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LogoutMsg)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interfa
 		FullMethod: Auth_Logout_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServer).Logout(ctx, req.(*LogoutMsg))
+		return srv.(AuthServer).Logout(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
