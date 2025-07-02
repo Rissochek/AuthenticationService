@@ -1,6 +1,9 @@
 package model
 
 type Session struct {
-	Refresh   string
-	ExpiresAt int64
+	ID 			uint 	`gorm:"primaryKey;autoIncrement"`
+	UserGUID 	string 	`gorm:"index"`
+	Refresh  	string
+	ExpiresAt 	int64
+	IsActive 	bool
 }

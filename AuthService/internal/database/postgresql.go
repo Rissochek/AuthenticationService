@@ -47,3 +47,12 @@ func (db *postgres_db) SearchGUID(guid string) error {
 
 	return nil
 }
+
+func (db *postgres_db) DeleteSession(guid string) error {
+	if err := db.PostgresDB.Where("user_guid = ?", guid).Delete(&model.Session{}).Error; err != nil {
+		log.Errorf("failed to delete session: %v", err)
+		return fmt.Errorf("failed to delete session")
+	}
+
+	return nil
+}

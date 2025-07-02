@@ -12,6 +12,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type TokenClaims struct {
+	GUID string
+	jwt.StandardClaims
+}
+
 type JWTManager struct {
 	SecretKey     string
 	TokenDuration time.Duration
@@ -23,7 +28,7 @@ func NewJWTManager(token_duration time.Duration) *JWTManager {
 }
 
 func (manager *JWTManager) GenerateToken(user *model.User) (string, error) {
-	claims := model.TokenClaims{
+	claims := TokenClaims{
 		GUID: user.GUID,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(manager.TokenDuration).Unix()},
@@ -39,14 +44,14 @@ func (manager *JWTManager) GenerateToken(user *model.User) (string, error) {
 	return signed_string, nil
 }
 
-func (manager *JWTManager) VerifyToken(user_token string) (*model.TokenClaims, error) {
+func (manager *JWTManager) VerifyToken(user_token string) (*TokenClaims, error) {
 	user_token, err := ExtractToken(user_token)
 	if err != nil {
 		return nil, err
 	}
 	token, err := jwt.ParseWithClaims(
 		user_token,
-		&model.TokenClaims{},
+		&TokenClaims{},
 		func(t *jwt.Token) (interface{}, error) {
 			_, ok := t.Method.(*jwt.SigningMethodHMAC)
 			if !ok {
@@ -61,7 +66,7 @@ func (manager *JWTManager) VerifyToken(user_token string) (*model.TokenClaims, e
 		return nil, fmt.Errorf("invalid token: %w", err)
 	}
 
-	claims, ok := token.Claims.(*model.TokenClaims)
+	claims, ok := token.Claims.(*TokenClaims)
 	if !ok {
 		return nil, fmt.Errorf("invalid token claims")
 	}
