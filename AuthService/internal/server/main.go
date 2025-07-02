@@ -22,6 +22,7 @@ type (
 
 	AuthManager interface {
 		GenerateToken(user *model.User) (string, error)
+		VerifyToken(user_token string) (*model.TokenClaims, error)
 	}
 
 	RefreshManager interface {
@@ -58,12 +59,21 @@ func (s *server) GetTokens(ctx context.Context, user_request *pb.GetTokensMsg) (
 	return &pb.GetTokensReply{Access: access, Refresh: refresh}, nil
 
 }
+
 func (s *server) RefreshTokens(ctx context.Context, user_request *pb.RefreshTokensMsg) (*pb.RefreshTokensReply, error) {
 	return nil, nil
 }
+
 func (s *server) GetGUID(ctx context.Context, user_request *pb.GetGUIDMsg) (*pb.GetGUIDReply, error) {
-	return nil, nil
+	claims, err := s.AuthManager.VerifyToken(user_request.Access)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+	
+	return &pb.GetGUIDReply{Guid: claims.GUID}, nil 
 }
+
 func (s *server) Logout(ctx context.Context, user_request *pb.LogoutMsg) (*emptypb.Empty, error) {
+
 	return nil, nil
 }

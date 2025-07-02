@@ -12,11 +12,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type JWTCustomClaims struct {
-	GUID string
-	jwt.StandardClaims
-}
-
 type JWTManager struct {
 	SecretKey     string
 	TokenDuration time.Duration
@@ -28,7 +23,7 @@ func NewJWTManager(token_duration time.Duration) *JWTManager {
 }
 
 func (manager *JWTManager) GenerateToken(user *model.User) (string, error) {
-	claims := JWTCustomClaims{
+	claims := model.TokenClaims{
 		GUID: user.GUID,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(manager.TokenDuration).Unix()},
@@ -44,17 +39,18 @@ func (manager *JWTManager) GenerateToken(user *model.User) (string, error) {
 	return signed_string, nil
 }
 
-func (manager *JWTManager) VerifyToken(user_token string) (*JWTCustomClaims, error) {
+func (manager *JWTManager) VerifyToken(user_token string) (*model.TokenClaims, error) {
 	user_token, err := ExtractToken(user_token)
 	if err != nil {
 		return nil, err
 	}
 	token, err := jwt.ParseWithClaims(
 		user_token,
-		&JWTCustomClaims{},
+		&model.TokenClaims{},
 		func(t *jwt.Token) (interface{}, error) {
 			_, ok := t.Method.(*jwt.SigningMethodHMAC)
 			if !ok {
+				log.Errorf("failed to verify token: %v", err)
 				return nil, fmt.Errorf("wrong jwt encrypting method")
 			}
 
@@ -65,7 +61,7 @@ func (manager *JWTManager) VerifyToken(user_token string) (*JWTCustomClaims, err
 		return nil, fmt.Errorf("invalid token: %w", err)
 	}
 
-	claims, ok := token.Claims.(*JWTCustomClaims)
+	claims, ok := token.Claims.(*model.TokenClaims)
 	if !ok {
 		return nil, fmt.Errorf("invalid token claims")
 	}
