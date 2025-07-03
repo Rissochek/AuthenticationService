@@ -10,7 +10,7 @@
 
 # Запуск проекта
 1. `git clone https://github.com/Rissochek/MEDODS_test_task.git .` (если уже создали папку для проекта). `git clone https://github.com/Rissochek/MEDODS_test_task.git` (если не создали папку для проекта)
-2. Запустите из **корневой директории проекта** команду: `docker compose -f .\Docker\docker-compose.yml -p auth up -d` и дождитесь сборки проекта.
+2. Запустите из **корневой директории проекта** команду: `docker compose -f .\Docker\docker-compose.yml -p auth up -d` и дождитесь сборки проекта (флаг -p auth необязателен, он задает название общему контейнеру)
 3. Введите в браузере http://localhost:8082/ или же перейдите по ссылке в клиенте docker desktop.
 
 # В случае каких-либо вопросов, улучшений, неполадок обращайтесь в tg: https://t.me/Killua_killer.
