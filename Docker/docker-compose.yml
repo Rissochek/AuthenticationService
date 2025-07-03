@@ -41,7 +41,9 @@ services:
       - ../docs/swagger:/swagger
 
   auth-service:
-    image: auth-service
+    build:
+      context: ../
+      dockerfile: AuthService/Dockerfile
     ports: 
       - "${AUTH_SERVICE_PORT}:8888"
     depends_on:
@@ -50,12 +52,16 @@ services:
       - redis
   
   gateway:
-    image: gateway
+    build:
+      context: ../
+      dockerfile: Gateway/Dockerfile
     ports:
       - "${GATEWAY_PORT}:8880"
   
   webhook:
-    image: webhook
+    build:
+      context: ../
+      dockerfile: WebHook/Dockerfile
     ports:
       - "${WEBHOOK_PORT}:9999"
     
