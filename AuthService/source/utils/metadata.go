@@ -15,6 +15,12 @@ func GetFromMetadata(ctx context.Context, key string) (string, error) {
 		return "", fmt.Errorf("failed to get header from metadata. key: %v", key)
 	}
 
-	token := md.Get(key)[0]
-	return token, nil
+	tokens := md.Get(key)
+	if len(tokens) != 0 {
+		token := tokens[0]
+		return token, nil
+	}
+
+	log.Errorf("%v is not provided in metadata", key)
+	return "", fmt.Errorf("%v is not provided in metadata", key)
 }

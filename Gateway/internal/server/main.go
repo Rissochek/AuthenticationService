@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"AuthService/source/utils"
-	"Gateway/internal/annotator"
+	"Gateway/internal/annotators"
 
 	pb "Proto"
 )
@@ -33,7 +33,7 @@ func main(){
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	mux := runtime.NewServeMux(runtime.WithMetadata(annotator.PutClientIpInMetadata))
+	mux := runtime.NewServeMux(runtime.WithMetadata(annotators.PutClientIpInMetadata), runtime.WithMetadata(annotators.PutClientUserAgentInMetadata))
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	err := pb.RegisterAuthHandlerFromEndpoint(ctx, mux, grpc_auth_address, opts)
 	if err != nil{

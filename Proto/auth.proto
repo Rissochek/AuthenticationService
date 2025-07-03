@@ -37,7 +37,7 @@ service Auth {
 }
 
 message GetTokens_msg {
-    string GUID = 1;
+    string guid = 1;
 }
 
 message RefreshTokens_msg {

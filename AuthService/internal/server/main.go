@@ -40,11 +40,11 @@ func NewServer(main_db database.Database, auth_manager auth.AuthManager, refresh
 }
 
 func (s *server) GetTokens(ctx context.Context, user_request *pb.GetTokensMsg) (*pb.GetTokensReply, error) {
-	if err := s.MainDB.SearchGUID(user_request.GUID); err != nil {
+	if err := s.MainDB.SearchGUID(user_request.Guid); err != nil {
 		return nil, status.Error(codes.NotFound, "GUID not found")
 	}
 
-	user_agent, err := utils.GetFromMetadata(ctx, "user-agent")
+	user_agent, err := utils.GetFromMetadata(ctx, "x-user-agent")
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "user-agent header not provided")
 	}
@@ -54,12 +54,12 @@ func (s *server) GetTokens(ctx context.Context, user_request *pb.GetTokensMsg) (
 		return nil, status.Error(codes.InvalidArgument, "x-forwarder-for header not provided")
 	}
 
-	session_id, refresh, err := s.MainDB.AddSession(user_request.GUID, s.RefreshManager, user_agent, user_ip)
+	session_id, refresh, err := s.MainDB.AddSession(user_request.Guid, s.RefreshManager, user_agent, user_ip)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to add session in db")
 	}
 
-	access, err := s.AuthManager.GenerateToken(&model.User{GUID: user_request.GUID}, session_id)
+	access, err := s.AuthManager.GenerateToken(&model.User{GUID: user_request.Guid}, session_id)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to generate access token")
 	}
@@ -75,7 +75,7 @@ func (s *server) RefreshTokens(ctx context.Context, user_request *pb.RefreshToke
 		return nil, status.Error(codes.Unauthenticated, "cant find authorization header")
 	}
 
-	user_agent, err := utils.GetFromMetadata(ctx, "user-agent")
+	user_agent, err := utils.GetFromMetadata(ctx, "x-user-agent")
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "user-agent header not provided")
 	}
@@ -206,12 +206,11 @@ func (s *server) GetGUID(ctx context.Context, _ *emptypb.Empty) (*pb.GetGUIDRepl
 }
 
 func (s *server) Logout(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "metadata is not provided")
+	token, err := utils.GetFromMetadata(ctx, "authorization")
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "cant find authorization header")
 	}
 
-	token := md.Get("authorization")[0]
 	claims, err := s.AuthManager.VerifyToken(token, true)
 	if err != nil {
 		return nil, err
@@ -234,10 +233,14 @@ func (s *server) Logout(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, 
 func main() {
 	utils.LoadEnvFile()
 	port, _ := strconv.Atoi(utils.GetKeyFromEnv("AUTH_HOST_PORT"))
+	access_life_time, _ := strconv.Atoi(utils.GetKeyFromEnv("ACCESS_LIFE_TIME"))
+	resresh_life_time, _ := strconv.Atoi(utils.GetKeyFromEnv("REFRESH_LIFE_TIME"))
+	refresh_length, _ := strconv.Atoi(utils.GetKeyFromEnv("REFRESH_LENGTH"))
+	
 	db := database.InitDataBase()
 	main_db := database.NewPostgresDB(db)
-	auth_manager := auth.NewJWTManager(1 * time.Minute)
-	refresh_manager := auth.NewRefreshGenerator(48, 24 * time.Hour)
+	auth_manager := auth.NewJWTManager(time.Duration(access_life_time) * time.Minute)
+	refresh_manager := auth.NewRefreshGenerator(int64(refresh_length), (time.Duration(resresh_life_time)*time.Hour))
 	blacklist_manager := database.NewRedisManager()
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
