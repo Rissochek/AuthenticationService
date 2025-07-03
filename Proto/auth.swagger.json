@@ -25,7 +25,7 @@
     "application/json"
   ],
   "paths": {
-    "/api/add_user": {
+    "/api/add-user": {
       "post": {
         "summary": "Add user",
         "description": "Adds user in DB, returns guid of new user",
@@ -138,6 +138,11 @@
         ],
         "tags": [
           "Auth"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
         ]
       }
     },
@@ -196,11 +201,6 @@
         ],
         "tags": [
           "Auth"
-        ],
-        "security": [
-          {
-            "Bearer": []
-          }
         ]
       }
     },

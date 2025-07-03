@@ -144,6 +144,7 @@ func (s *server) RefreshTokens(ctx context.Context, user_request *pb.RefreshToke
 			log.Errorf("failed to send to webhook: %v", err)
 			return nil, status.Error(codes.Internal, "failed send to webhook")
 		}
+		log.Print("message send to webhook")
 		response.Body.Close()
 	}
 	err = utils.CompareHashAndPassword(user_request.Refresh, session.Refresh)
@@ -190,17 +191,17 @@ func (s *server) GetGUID(ctx context.Context, _ *emptypb.Empty) (*pb.GetGUIDRepl
 	}
 
 	token := raw_token[0]
+	claims, err := s.AuthManager.VerifyToken(token, true)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+
 	is_blacklisted, err := s.BlacklistManager.BlacklistCheck(ctx, token)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed blacklist check")
 	}
 	if is_blacklisted {
 		return nil, status.Error(codes.Unauthenticated, "token is blacklisted")
-	}
-
-	claims, err := s.AuthManager.VerifyToken(token, true)
-	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, err.Error())
 	}
 
 	return &pb.GetGUIDReply{Guid: claims.GUID}, nil

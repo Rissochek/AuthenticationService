@@ -16,6 +16,19 @@ import (
 	pb "Proto"
 )
 
+func allowCORS(h http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, User-Agent, X-Forwarded-For")
+        if r.Method == "OPTIONS" {
+            w.WriteHeader(http.StatusOK)
+            return
+        }
+        h.ServeHTTP(w, r)
+    })
+}
+
 func main(){
 	utils.LoadEnvFile()
 
@@ -38,5 +51,5 @@ func main(){
 		log.Fatalf("Failed to start HTTP server: %v", err)
 	}
 	log.Printf("HTTP server listening on %s", http_address)
-    log.Fatal(http.ListenAndServe(http_address, mux))
+    log.Fatal(http.ListenAndServe(http_address, allowCORS(mux)))
 }

@@ -15,6 +15,8 @@
       "name": "Auth"
     }
   ],
+  "host": "localhost:8880",
+  "basePath": "/",
   "schemes": [
     "http"
   ],
@@ -25,7 +27,7 @@
     "application/json"
   ],
   "paths": {
-    "/api/add_user": {
+    "/api/add-user": {
       "post": {
         "summary": "Add user",
         "description": "Adds user in DB, returns guid of new user",
@@ -138,6 +140,11 @@
         ],
         "tags": [
           "Auth"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
         ]
       }
     },
@@ -192,15 +199,17 @@
             "schema": {
               "$ref": "#/definitions/protoGetTokens_msg"
             }
+          },
+          {
+            "name": "X-Forwarded-For",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "description": "X-Forwarded-For header"
           }
         ],
         "tags": [
           "Auth"
-        ],
-        "security": [
-          {
-            "Bearer": []
-          }
         ]
       }
     },
@@ -326,6 +335,13 @@
             "schema": {
               "$ref": "#/definitions/protoRefreshTokens_msg"
             }
+          },
+          {
+            "name": "X-Forwarded-For",
+            "in": "header",
+            "required": false,
+            "type": "string",
+            "description": "X-Forwarded-For header"
           }
         ],
         "tags": [

@@ -44,12 +44,6 @@ service Auth {
             description: "Method to get access and refresh token pair"
             summary: "Get tokens"
             tags: "Auth"
-            security: {
-                security_requirement: {
-                  key: "Bearer"
-                  value: {}
-                }
-            }
             responses: {
                 key: "200"
                 value {
@@ -93,7 +87,7 @@ service Auth {
         };
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
             summary: "Refresh token pair"
-            description: "Refresh token pair. Func check if ip/user-agent changes. If nothing changed, this func deleting old session and blacklists access token"
+            description: "Refresh token pair. Func check if ip/user-agent changes. If nothing changed, this func deleting old session and blacklists access token."
             tags: "Auth"
             security: {
                 security_requirement: {
@@ -184,6 +178,12 @@ service Auth {
             summary: "Get GUID of user"
             description: "This method returns user guid from access token"
             tags: "Auth"
+            security: {
+                security_requirement: {
+                  key: "Bearer"
+                  value: {}
+                }
+            }
             responses: {
                 key: "200"
                 value: {
@@ -290,7 +290,7 @@ service Auth {
     };
     rpc AddUser(google.protobuf.Empty) returns (AddUser_reply) {
         option (google.api.http) = {
-            post: "/api/add_user",
+            post: "/api/add-user",
             body: "*"
         };
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
