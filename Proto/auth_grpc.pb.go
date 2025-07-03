@@ -24,6 +24,7 @@ const (
 	Auth_RefreshTokens_FullMethodName = "/proto.Auth/RefreshTokens"
 	Auth_GetGUID_FullMethodName       = "/proto.Auth/GetGUID"
 	Auth_Logout_FullMethodName        = "/proto.Auth/Logout"
+	Auth_AddUser_FullMethodName       = "/proto.Auth/AddUser"
 )
 
 // AuthClient is the client API for Auth service.
@@ -34,6 +35,7 @@ type AuthClient interface {
 	RefreshTokens(ctx context.Context, in *RefreshTokensMsg, opts ...grpc.CallOption) (*RefreshTokensReply, error)
 	GetGUID(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetGUIDReply, error)
 	Logout(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	AddUser(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AddUserReply, error)
 }
 
 type authClient struct {
@@ -84,6 +86,16 @@ func (c *authClient) Logout(ctx context.Context, in *emptypb.Empty, opts ...grpc
 	return out, nil
 }
 
+func (c *authClient) AddUser(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*AddUserReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddUserReply)
+	err := c.cc.Invoke(ctx, Auth_AddUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServer is the server API for Auth service.
 // All implementations must embed UnimplementedAuthServer
 // for forward compatibility.
@@ -92,6 +104,7 @@ type AuthServer interface {
 	RefreshTokens(context.Context, *RefreshTokensMsg) (*RefreshTokensReply, error)
 	GetGUID(context.Context, *emptypb.Empty) (*GetGUIDReply, error)
 	Logout(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	AddUser(context.Context, *emptypb.Empty) (*AddUserReply, error)
 	mustEmbedUnimplementedAuthServer()
 }
 
@@ -113,6 +126,9 @@ func (UnimplementedAuthServer) GetGUID(context.Context, *emptypb.Empty) (*GetGUI
 }
 func (UnimplementedAuthServer) Logout(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
+}
+func (UnimplementedAuthServer) AddUser(context.Context, *emptypb.Empty) (*AddUserReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddUser not implemented")
 }
 func (UnimplementedAuthServer) mustEmbedUnimplementedAuthServer() {}
 func (UnimplementedAuthServer) testEmbeddedByValue()              {}
@@ -207,6 +223,24 @@ func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Auth_AddUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).AddUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_AddUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).AddUser(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Auth_ServiceDesc is the grpc.ServiceDesc for Auth service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -229,6 +263,10 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Logout",
 			Handler:    _Auth_Logout_Handler,
+		},
+		{
+			MethodName: "AddUser",
+			Handler:    _Auth_AddUser_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

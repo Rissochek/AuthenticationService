@@ -141,6 +141,7 @@ func (s *server) RefreshTokens(ctx context.Context, user_request *pb.RefreshToke
 
 		response, err := http.Post(webhook, "application/json", bytes.NewBuffer(json_data))
 		if err != nil {
+			log.Errorf("failed to send to webhook: %v", err)
 			return nil, status.Error(codes.Internal, "failed send to webhook")
 		}
 		response.Body.Close()
@@ -228,6 +229,14 @@ func (s *server) Logout(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, 
 		return nil, status.Error(codes.Internal, "failed to delete session")
 	}
 	return &emptypb.Empty{}, nil
+}
+
+func (s *server) AddUser(context.Context, *emptypb.Empty) (*pb.AddUserReply, error) {
+	guid, err := s.MainDB.AddUser()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to add user to database")
+	}
+	return &pb.AddUserReply{Guid: guid}, nil
 }
 
 func main() {

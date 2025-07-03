@@ -1,0 +1,458 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "MEDODS TEST TASK",
+    "description": "Это тестовое задание включается в себя набор функций, реализующих часть сервиса аутенфикации",
+    "version": "1.0",
+    "contact": {
+      "name": "Yunusov Ruslan",
+      "url": "https://github.com/rissochek",
+      "email": "ruslanynysov@mail.ru"
+    }
+  },
+  "tags": [
+    {
+      "name": "Auth"
+    }
+  ],
+  "schemes": [
+    "http"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/add_user": {
+      "post": {
+        "summary": "Add user",
+        "description": "Adds user in DB, returns guid of new user",
+        "operationId": "Auth_AddUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/protoAddUser_reply"
+            },
+            "examples": {
+              "application/json": {
+                "guid": "66d89b0b-eaae-4853-90c3-238d4531bd1a"
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error while working with dbs",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "failed to add user"
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ],
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/get-guid": {
+      "post": {
+        "summary": "Get GUID of user",
+        "description": "This method returns user guid from access token",
+        "operationId": "Auth_GetGUID",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/protoGetGUID_reply"
+            },
+            "examples": {
+              "application/json": {
+                "guid": "66d89b0b-eaae-4853-90c3-238d4531bd1a"
+              }
+            }
+          },
+          "400": {
+            "description": "Auth header not provided",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "authorization header is not provided"
+              }
+            }
+          },
+          "401": {
+            "description": "Auth error, token is blacklisted",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "token is blacklisted"
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "failed blacklist check"
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ],
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/get-tokens": {
+      "post": {
+        "summary": "Get tokens",
+        "description": "Method to get access and refresh token pair",
+        "operationId": "Auth_GetTokens",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/protoGetTokens_reply"
+            },
+            "examples": {
+              "application/json": {
+                "access": "JWT access token",
+                "refresh": "base 64 encoded token"
+              }
+            }
+          },
+          "400": {
+            "description": "Incorrect header data. User-agent or X-Forwarded-For is not provided",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "x-forwarder-for header not provided"
+              }
+            }
+          },
+          "404": {
+            "description": "GUID not found",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "GUID not found"
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/protoGetTokens_msg"
+            }
+          }
+        ],
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/logout": {
+      "post": {
+        "summary": "User logout",
+        "description": "Logout user, deleting session and blacklisting access token",
+        "operationId": "Auth_Logout",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            },
+            "examples": {
+              "application/json": {}
+            }
+          },
+          "401": {
+            "description": "Auth error, token is not provided or invalid",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "token expired"
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error while working with dbs",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "failed to delete session"
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ],
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/api/refresh-tokens": {
+      "post": {
+        "summary": "Refresh token pair",
+        "description": "Refresh token pair. Func check if ip/user-agent changes. If nothing changed, this func deleting old session and blacklists access token",
+        "operationId": "Auth_RefreshTokens",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/protoRefreshTokens_reply"
+            },
+            "examples": {
+              "application/json": {
+                "access": "new access token",
+                "refresh": "new base64 encoded refresh token"
+              }
+            }
+          },
+          "400": {
+            "description": "Headers user-agent and x-forwarded-for not provided",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "x-forwarder-for header not provided"
+              }
+            }
+          },
+          "401": {
+            "description": "Token is invalid or blacklisted. Or user-agent has changed",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "token expired"
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "schema": {},
+            "examples": {
+              "application/json": {
+                "error": "failed to generate access token"
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/protoRefreshTokens_msg"
+            }
+          }
+        ],
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protoAddUser_reply": {
+      "type": "object",
+      "properties": {
+        "guid": {
+          "type": "string",
+          "example": "66d89b0b-eaae-4853-90c3-238d4531bd1a",
+          "description": "User GUID",
+          "title": "GUID"
+        }
+      }
+    },
+    "protoGetGUID_reply": {
+      "type": "object",
+      "properties": {
+        "guid": {
+          "type": "string",
+          "example": "66d89b0b-eaae-4853-90c3-238d4531bd1a",
+          "description": "User GUID",
+          "title": "GUID"
+        }
+      }
+    },
+    "protoGetTokens_msg": {
+      "type": "object",
+      "properties": {
+        "guid": {
+          "type": "string",
+          "example": "66d89b0b-eaae-4853-90c3-238d4531bd1a",
+          "description": "User GUID",
+          "title": "GUID"
+        }
+      }
+    },
+    "protoGetTokens_reply": {
+      "type": "object",
+      "properties": {
+        "access": {
+          "type": "string",
+          "example": "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJHVUlEIjoiYWJjIiwiU2Vzc2lvbklkIjoxLCJleHAiOjE3NTE1NDQ2NDN9.FTbsrUtxKzRJsolEBR4Xfkyiumj7nTPdTuCcrvxlhAH7aFIOWWZhjScAoTcGc3jVmoSbV6P_aqhCbUqqlbP73g",
+          "description": "Access token",
+          "title": "Access"
+        },
+        "refresh": {
+          "type": "string",
+          "example": "t2+kPKC4x+4TvvAROaZkMHeajSCMGAu8xVtcQnXg8AS4Fb1I5FFnp8L0yx+6ED0q",
+          "description": "Refresh token",
+          "title": "Refresh"
+        }
+      }
+    },
+    "protoRefreshTokens_msg": {
+      "type": "object",
+      "properties": {
+        "refresh": {
+          "type": "string",
+          "example": "t2+kPKC4x+4TvvAROaZkMHeajSCMGAu8xVtcQnXg8AS4Fb1I5FFnp8L0yx+6ED0q",
+          "description": "Refresh token",
+          "title": "Refresh"
+        }
+      }
+    },
+    "protoRefreshTokens_reply": {
+      "type": "object",
+      "properties": {
+        "access": {
+          "type": "string",
+          "example": "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJHVUlEIjoiYWJjIiwiU2Vzc2lvbklkIjoxLCJleHAiOjE3NTE1NDQ2NDN9.FTbsrUtxKzRJsolEBR4Xfkyiumj7nTPdTuCcrvxlhAH7aFIOWWZhjScAoTcGc3jVmoSbV6P_aqhCbUqqlbP73g",
+          "description": "Access token",
+          "title": "Access"
+        },
+        "refresh": {
+          "type": "string",
+          "example": "t2+kPKC4x+4TvvAROaZkMHeajSCMGAu8xVtcQnXg8AS4Fb1I5FFnp8L0yx+6ED0q",
+          "description": "Refresh token",
+          "title": "Refresh"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "Bearer": {
+      "type": "apiKey",
+      "description": "Access token",
+      "name": "Authorization",
+      "in": "header"
+    }
+  }
+}

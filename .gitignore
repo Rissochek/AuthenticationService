@@ -32,3 +32,4 @@ go.work.sum
 # .vscode/
 
 Proto/googleapis
+Proto/grpc-gateway

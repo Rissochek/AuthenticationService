@@ -16,8 +16,6 @@ import (
 	pb "Proto"
 )
 
-
-
 func main(){
 	utils.LoadEnvFile()
 
@@ -39,7 +37,6 @@ func main(){
 	if err != nil{
 		log.Fatalf("Failed to start HTTP server: %v", err)
 	}
-	
 	log.Printf("HTTP server listening on %s", http_address)
     log.Fatal(http.ListenAndServe(http_address, mux))
 }

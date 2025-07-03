@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"github.com/google/uuid"
 
 	"AuthService/internal/model"
 	"AuthService/internal/auth"
@@ -18,6 +19,7 @@ type Database interface {
 	SearchSession(guid string, session_id uint) (*model.Session, error)
 	DeleteSession(guid string, session_id uint) error
 	AddSession(guid string, refresh_generator auth.RefreshManager, user_agent string, user_ip string) (uint, string, error)
+	AddUser() (string, error)
 }
 
 type postgres_db struct {
@@ -45,6 +47,18 @@ func InitDataBase() *gorm.DB {
 func NewPostgresDB(db *gorm.DB) *postgres_db {
 	postgres := postgres_db{PostgresDB: *db}
 	return &postgres
+}
+
+func (db *postgres_db) AddUser() (string, error){
+	guid := uuid.New().String()
+	user := model.User{GUID: guid}
+	result := db.PostgresDB.Create(&user)
+	if result.Error != nil {
+		log.Errorf("failed to create User: %v", result.Error)
+		return "", result.Error
+	}
+
+	return guid, nil
 }
 
 func (db *postgres_db) SearchGUID(guid string) error {

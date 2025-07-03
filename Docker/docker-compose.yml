@@ -31,6 +31,14 @@ services:
     volumes:
       - redisdata:/data
 
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    environment:
+      SWAGGER_JSON: /swagger/auth.swagger.json
+    ports:
+      - "8082:8080"
+    volumes:
+      - ../docs/swagger:/swagger
 volumes:
   postgres_data:
   redisdata:

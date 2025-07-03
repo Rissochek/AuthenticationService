@@ -5,12 +5,84 @@ package proto;
 option go_package = "proto/";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+    info: {
+        title: "MEDODS TEST TASK";
+        version: "1.0";
+        description: "Это тестовое задание включается в себя набор функций, реализующих часть сервиса аутенфикации";
+        contact: {
+            name: "Yunusov Ruslan"
+            url: "https://github.com/rissochek"
+            email: "ruslanynysov@mail.ru"
+        };
+    }
+    schemes: HTTP;
+    consumes: "application/json";
+    produces: "application/json";
+    security_definitions: {
+        security: {
+            key: "Bearer"
+            value: {
+                type: TYPE_API_KEY
+                in: IN_HEADER
+                name: "Authorization"
+                description: "Access token"
+            }
+        }
+    }
+};
 
 service Auth {
     rpc GetTokens(GetTokens_msg) returns (GetTokens_reply) {
         option (google.api.http) = {
             post: "/api/get-tokens",
             body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            description: "Method to get access and refresh token pair"
+            summary: "Get tokens"
+            tags: "Auth"
+            security: {
+                security_requirement: {
+                  key: "Bearer"
+                  value: {}
+                }
+            }
+            responses: {
+                key: "200"
+                value {
+                    examples: {
+                        key: "application/json"
+                        value: "{\"access\": \"JWT access token\", \"refresh\": \"base 64 encoded token\"}"
+                    }
+                }
+            }
+            responses: {
+                key: "400"
+                value: {
+                    description: "Incorrect header data. User-agent or X-Forwarded-For is not provided"
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"user-agent header not provided\"}"
+                    }
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"x-forwarder-for header not provided\"}"
+                    }
+                }
+            }
+              responses: {
+                key: "404"
+                value: {
+                  description: "GUID not found"
+                  examples: {
+                    key: "application/json"
+                    value: "{\"error\": \"GUID not found\"}"
+                  }
+                }
+            }
         };
     };
 
@@ -19,12 +91,138 @@ service Auth {
             post: "/api/refresh-tokens",
             body: "*"
         };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "Refresh token pair"
+            description: "Refresh token pair. Func check if ip/user-agent changes. If nothing changed, this func deleting old session and blacklists access token"
+            tags: "Auth"
+            security: {
+                security_requirement: {
+                  key: "Bearer"
+                  value: {}
+                }
+            }
+            responses: {
+                key: "200"
+                value: {
+                    examples: {
+                        key: "application/json"
+                        value: "{\"access\": \"new access token\", \"refresh\": \"new base64 encoded refresh token\"}"
+                    }
+                }
+            }
+            responses: {
+                key: "400"
+                value: {
+                    description: "Headers user-agent and x-forwarded-for not provided"
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"user-agent header not provided\"}"
+                    }
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"x-forwarder-for header not provided\"}"
+                    }
+                }
+            }
+            responses: {
+                key: "401"
+                value: {
+                    description: "Token is invalid or blacklisted. Or user-agent has changed"
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"user-agent changed, session deauthorized\"}"
+                    }
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"token is blacklisted\"}"
+                    }
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"invalid token format\"}"
+                    }
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"invalid signature\"}"
+                    }
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"token expired\"}"
+                    }
+                }
+            }
+            responses: {
+                key: "500"
+                value: {
+                    description: "Internal error"
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"failed to add session in db\"}"
+                    }
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"failed to add token to blacklist\"}"
+                    }
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"failed to delete session\"}"
+                    }
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"failed to generate access token\"}"
+                    }
+                }
+            }
+        };
     };
 
     rpc GetGUID(google.protobuf.Empty) returns (GetGUID_reply) {
         option (google.api.http) = {
             post: "/api/get-guid",
             body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "Get GUID of user"
+            description: "This method returns user guid from access token"
+            tags: "Auth"
+            responses: {
+                key: "200"
+                value: {
+                    examples: {
+                        key: "application/json"
+                        value: "{\"guid\": \"66d89b0b-eaae-4853-90c3-238d4531bd1a\"}"
+                    }
+                }
+            }
+            responses: {
+                key: "400"
+                value: {
+                    description: "Auth header not provided"
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"authorization header is not provided\"}"
+                    }
+                }
+            }
+            responses: {
+                key: "401"
+                value: {
+                    description: "Auth error, token is blacklisted"
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"token is blacklisted\"}"
+                    }
+                }
+            }
+            responses: {
+                key: "500"
+                value: {
+                    description: "Internal error"
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"failed blacklist check\"}"
+                    }
+                }
+            }
         };
     };
 
@@ -33,27 +231,158 @@ service Auth {
             post: "/api/logout",
             body: "*"
         };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "User logout"
+            description: "Logout user, deleting session and blacklisting access token"
+            tags: "Auth"
+            security: {
+                security_requirement: {
+                  key: "Bearer"
+                  value: {}
+                }
+            }
+            responses: {
+                key: "200"
+                value: {
+                    examples: {
+                        key: "application/json"
+                        value: "{}"
+                    }
+                }
+            }
+            responses: {
+                key: "401"
+                value: {
+                    description: "Auth error, token is not provided or invalid"
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"cant find authorization header\"}"
+                    }
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"invalid token format\"}"
+                    }
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"invalid signature\"}"
+                    }
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"token expired\"}"
+                    }
+                }
+            }
+            responses: {
+                key: "500"
+                value: {
+                    description: "Internal error while working with dbs"
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"failed to add token to blacklist\"}"
+                    }
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"failed to delete session\"}"
+                    }
+                }
+            }
+        };
+    };
+    rpc AddUser(google.protobuf.Empty) returns (AddUser_reply) {
+        option (google.api.http) = {
+            post: "/api/add_user",
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "Add user"
+            description: "Adds user in DB, returns guid of new user"
+            tags: "Auth"
+            responses: {
+                key: "200"
+                value: {
+                    examples: {
+                        key: "application/json"
+                        value: "{\"guid\": \"66d89b0b-eaae-4853-90c3-238d4531bd1a\"}"
+                    }
+                }
+            }
+            responses: {
+                key: "500"
+                value: {
+                    description: "Internal error while working with dbs"
+                    examples: {
+                        key: "application/json"
+                        value: "{\"error\": \"failed to add user\"}"
+                    }
+                }
+            }
+            
+        };
     };
 }
 
 message GetTokens_msg {
-    string guid = 1;
+    string guid = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        title: "GUID"
+        example: "\"66d89b0b-eaae-4853-90c3-238d4531bd1a\""
+        description: "User GUID"
+        }
+    ];
 }
 
 message RefreshTokens_msg {
-    string refresh = 1;
+    string refresh = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        title: "Refresh"
+        example: "\"t2+kPKC4x+4TvvAROaZkMHeajSCMGAu8xVtcQnXg8AS4Fb1I5FFnp8L0yx+6ED0q\""
+        description: "Refresh token"
+        }
+    ];
 }
 
 message GetTokens_reply {
-    string access = 1;
-    string refresh = 2;
+    string access = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        title: "Access"
+        example: "\"eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJHVUlEIjoiYWJjIiwiU2Vzc2lvbklkIjoxLCJleHAiOjE3NTE1NDQ2NDN9.FTbsrUtxKzRJsolEBR4Xfkyiumj7nTPdTuCcrvxlhAH7aFIOWWZhjScAoTcGc3jVmoSbV6P_aqhCbUqqlbP73g\""
+        description: "Access token"
+        }
+    ];
+    string refresh = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        title: "Refresh"
+        example: "\"t2+kPKC4x+4TvvAROaZkMHeajSCMGAu8xVtcQnXg8AS4Fb1I5FFnp8L0yx+6ED0q\""
+        description: "Refresh token"
+        }
+    ];
 }
 
 message RefreshTokens_reply {
-    string access = 1;
-    string refresh = 2;
+    string access = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        title: "Access"
+        example: "\"eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJHVUlEIjoiYWJjIiwiU2Vzc2lvbklkIjoxLCJleHAiOjE3NTE1NDQ2NDN9.FTbsrUtxKzRJsolEBR4Xfkyiumj7nTPdTuCcrvxlhAH7aFIOWWZhjScAoTcGc3jVmoSbV6P_aqhCbUqqlbP73g\""
+        description: "Access token"
+        }
+    ];
+    string refresh = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        title: "Refresh"
+        example: "\"t2+kPKC4x+4TvvAROaZkMHeajSCMGAu8xVtcQnXg8AS4Fb1I5FFnp8L0yx+6ED0q\""
+        description: "Refresh token"
+        }
+    ];
 }
 
 message GetGUID_reply {
-    string guid = 1;
+    string guid = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        title: "GUID"
+        example: "\"66d89b0b-eaae-4853-90c3-238d4531bd1a\""
+        description: "User GUID"
+        }
+    ];
+}
+
+message AddUser_reply {
+    string guid = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        title: "GUID"
+        example: "\"66d89b0b-eaae-4853-90c3-238d4531bd1a\""
+        description: "User GUID"
+        }
+    ];
 }
