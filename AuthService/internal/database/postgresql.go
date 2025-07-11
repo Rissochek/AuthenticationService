@@ -35,6 +35,8 @@ func InitDataBase() *gorm.DB {
 	timezone := utils.GetKeyFromEnv("POSTGRES_TZ")
 	ssl_mode := utils.GetKeyFromEnv("POSTGRES_SSL")
 
+	time.Sleep(5 * time.Second)
+	log.Info("Sleeping")
 	dsn := fmt.Sprintf("host=%v user=%v password=%v dbname=%v port=%v sslmode=%v TimeZone=%v", host, user, password, db_name, port, ssl_mode, timezone)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {

@@ -247,6 +247,8 @@ func main() {
 	resresh_life_time, _ := strconv.Atoi(utils.GetKeyFromEnv("REFRESH_LIFE_TIME"))
 	refresh_length, _ := strconv.Atoi(utils.GetKeyFromEnv("REFRESH_LENGTH"))
 	
+	log.Info("New Version is running")
+
 	db := database.InitDataBase()
 	main_db := database.NewPostgresDB(db)
 	auth_manager := auth.NewJWTManager(time.Duration(access_life_time) * time.Minute)

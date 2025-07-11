@@ -7,8 +7,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "${POSTGRES_SERVER_PORT}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+
 
   pgadmin:
     image: dpage/pgadmin4
@@ -66,5 +65,4 @@ services:
       - "${WEBHOOK_PORT}:9999"
     
 volumes:
-  postgres_data:
   redisdata:
